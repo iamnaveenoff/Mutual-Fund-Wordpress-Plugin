@@ -1,8 +1,6 @@
-// assets/admin.js - Fixed version
+// assets/admin.js - Fixed version for settings save issue
 jQuery(document).ready(function($) {
     'use strict';
-    
-    let isSubmitting = false;
     
     // Test email functionality
     $('#mff-test-email').on('click', function(e) {
@@ -202,21 +200,15 @@ jQuery(document).ready(function($) {
         }
     });
     
-    // FIXED: Form submission handling
-    $('#mff-save-settings').on('click', function(e) {
-        // Don't prevent default - let WordPress handle the form submission
-        if (isSubmitting) {
-            e.preventDefault();
-            return false;
-        }
-        
-        // Clear any previous error styles
-        $('.form-table input, .form-table select, .form-table textarea').css('border-color', '');
-        $('.email-error').remove();
-        
+    // FIXED: Simple form validation without preventing WordPress form handling
+    $('.wrap form').on('submit', function(e) {
         const smtpEnabled = $('input[name="mff_settings[enable_smtp]"]').is(':checked');
         let hasErrors = false;
         const errors = [];
+        
+        // Clear previous error styles
+        $('.form-table input, .form-table select, .form-table textarea').css('border-color', '');
+        $('.email-error').remove();
         
         // Validate only if SMTP is enabled
         if (smtpEnabled) {
@@ -265,7 +257,7 @@ jQuery(document).ready(function($) {
             }
         });
         
-        // If there are errors, prevent submission
+        // If there are errors, prevent submission and show them
         if (hasErrors) {
             e.preventDefault();
             
@@ -283,15 +275,15 @@ jQuery(document).ready(function($) {
             return false;
         }
         
-        // If no errors, show saving state
-        isSubmitting = true;
-        $(this).prop('disabled', true).val('Saving Settings...');
+        // Show saving state on the submit button
+        const submitButton = $(this).find('input[type="submit"]');
+        submitButton.prop('disabled', true).val('Saving Settings...');
         
-        // Let the form submit naturally - WordPress will handle it
+        // Re-enable after a delay (WordPress will redirect anyway if successful)
+        setTimeout(function() {
+            submitButton.prop('disabled', false).val('Save Settings');
+        }, 3000);
     });
-        
-    // REMOVED: Form submission handler that was interfering
-    // Let WordPress Settings API handle form submission naturally
     
     // Auto-dismiss notices after 5 seconds
     setTimeout(function() {

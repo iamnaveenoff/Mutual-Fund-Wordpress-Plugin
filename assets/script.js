@@ -1,4 +1,4 @@
-// assets/script.js - Enhanced WordPress Compatible Version
+// assets/script.js - Fixed version with proper spinner handling
 
 jQuery(document).ready(function($) {
     'use strict';
@@ -151,7 +151,8 @@ jQuery(document).ready(function($) {
             }
             
             // Disable submit button and show spinner
-            submitBtn.prop('disabled', true).find('i').removeClass('fa-send').addClass('fa-spinner fa-spin');
+            submitBtn.prop('disabled', true);
+            submitBtn.find('i').removeClass('fa-send').addClass('fa-spinner fa-spin');
             spinner.show();
             
             // Prepare form data
@@ -192,11 +193,14 @@ jQuery(document).ready(function($) {
                     MutualFundForm.showMessage('error', errorMessage);
                 },
                 complete: function() {
-                    // Re-enable submit button and hide spinner
-                    submitBtn.prop('disabled', false).find('i').removeClass('fa-spinner fa-spin').addClass('fa-send');
-                    spinner.hide();
+                    // FIXED: Always reset button and hide spinner
+                     submitBtn.prop('disabled', false);
+                     submitBtn.find('i').removeClass('fa-spinner fa-spin').addClass('fa-send');
+                     spinner.hide();
                 }
             });
+            
+            return false; // Prevent any other form submission
         },
         
         validateForm: function() {

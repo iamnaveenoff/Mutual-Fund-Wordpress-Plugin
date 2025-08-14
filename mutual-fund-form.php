@@ -351,7 +351,7 @@ class MutualFundForm
 
     public function admin_init()
     {
-        // Register settings with a simple sanitize callback
+        // FIXED: Register settings with proper callback that handles custom table saving
         register_setting(
             'mff_settings_group',
             'mff_settings',
@@ -407,6 +407,7 @@ class MutualFundForm
         wp_enqueue_style('mff-admin-style', MFF_PLUGIN_URL . 'assets/admin.css', array(), MFF_VERSION);
     }
 
+    // FIXED: Improved sanitization callback that properly saves to custom table
     public function sanitize_and_save_settings($input)
     {
         $sanitized = array();
@@ -470,13 +471,14 @@ class MutualFundForm
         $sanitized['enable_smtp'] = isset($input['enable_smtp']) ? '1' : '0';
         $sanitized['store_submissions'] = isset($input['store_submissions']) ? '1' : '0';
 
-        // Save to custom table FIRST
-        foreach ($sanitized as $key => $value) {
-            $this->save_setting($key, $value, true);
-        }
+        // FIXED: Save to custom table using the dedicated method
+        $this->save_all_settings($sanitized);
 
         // Add success message
-        add_settings_error('mff_settings', 'settings_updated', 'Settings saved successfully!', 'updated');
+        add_settings_error('mff_settings', 'settings_updated', 'Settings saved successfully to custom table!', 'updated');
+
+        // Log for debugging
+        error_log('MFF: Settings saved to custom table: ' . print_r(array_keys($sanitized), true));
 
         // Return the sanitized array for WordPress to save as backup
         return $sanitized;

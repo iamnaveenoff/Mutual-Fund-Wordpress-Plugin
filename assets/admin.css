@@ -1,0 +1,441 @@
+/* assets/admin.css */
+
+.wrap h1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.wrap h1 .dashicons {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    color: #0073aa;
+}
+
+.mff-connection-status {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.mff-connection-status h3 {
+    margin-top: 0;
+    color: #23282d;
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+.mff-connection-status table {
+    margin: 0;
+    width: 100%;
+}
+
+.mff-connection-status td {
+    padding: 8px 10px 8px 0;
+    border: none;
+    vertical-align: top;
+}
+
+.mff-connection-status td:first-child {
+    width: 150px;
+    font-weight: 600;
+}
+
+.mff-test-email-section {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f0f8f0;
+    border: 1px solid #c3e6cb;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.mff-help-section {
+    margin-top: 30px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 20px;
+}
+
+.mff-help-section h3 {
+    margin-top: 0;
+    color: #23282d;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    font-size: 18px;
+}
+
+.mff-smtp-examples {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-top: 15px;
+}
+
+.mff-example {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #0073aa;
+}
+
+.mff-example h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #0073aa;
+    font-size: 16px;
+}
+
+.mff-example p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #666;
+}
+
+.mff-status-indicator {
+    padding: 6px 12px;
+    background: #ffeaa7;
+    border: 1px solid #fdcb6e;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.mff-auto-suggest-notice {
+    color: #0073aa !important;
+    font-size: 12px !important;
+    margin-top: 5px !important;
+    padding: 5px 10px !important;
+    background: #e5f5fa !important;
+    border: 1px solid #b8daff !important;
+    border-radius: 3px !important;
+    display: block;
+}
+
+/* Enhanced form styling */
+.form-table {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.form-table th {
+    width: 200px;
+    font-weight: 600;
+    color: #23282d;
+    padding: 15px 10px 15px 0;
+    vertical-align: top;
+}
+
+.form-table td {
+    position: relative;
+    padding: 15px 10px 15px 0;
+    vertical-align: top;
+}
+
+.form-table .description {
+    font-style: italic;
+    color: #666;
+    margin-top: 5px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* Form sections */
+h2 {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+    color: #23282d;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+h2:first-of-type {
+    margin-top: 15px;
+}
+
+/* Input enhancements */
+.regular-text,
+.large-text,
+.small-text {
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.regular-text:focus,
+.large-text:focus,
+.small-text:focus {
+    box-shadow: 0 0 0 1px #0073aa;
+    border-color: #0073aa;
+    outline: none;
+}
+
+/* Button enhancements */
+#mff-test-email {
+    background: #0073aa;
+    color: white;
+    border-color: #0073aa;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+#mff-test-email:hover {
+    background: #005a87;
+    border-color: #005a87;
+    color: white;
+}
+
+#mff-test-email:disabled {
+    background: #7e8993;
+    border-color: #7e8993;
+    color: #fff;
+    cursor: not-allowed;
+}
+
+#mff-save-settings {
+    margin-top: 20px;
+    font-size: 14px;
+    padding: 10px 20px;
+}
+
+/* Password toggle button */
+.mff-toggle-password {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+    height: auto !important;
+    line-height: 1.4 !important;
+    margin-left: 5px;
+    vertical-align: top;
+}
+
+/* Error styling */
+.email-error {
+    color: #d63638 !important;
+    font-size: 12px !important;
+    margin-top: 5px !important;
+    display: block;
+    font-style: italic;
+}
+
+/* Success/Error messages in test result */
+#mff-test-result {
+    font-weight: 500;
+    font-size: 14px;
+}
+
+#mff-test-result .success {
+    color: #00a32a;
+}
+
+#mff-test-result .error {
+    color: #d63638;
+}
+
+/* Notice enhancements */
+.notice {
+    border-left-width: 4px;
+    border-left-style: solid;
+    margin: 15px 0;
+    padding: 12px;
+    border-radius: 0 3px 3px 0;
+}
+
+.notice p {
+    margin: 0.5em 0;
+    padding: 2px;
+}
+
+.notice.notice-info {
+    border-left-color: #00a32a;
+    background-color: #f0f8f0;
+}
+
+.notice.notice-warning {
+    border-left-color: #dba617;
+    background-color: #fcf9e8;
+}
+
+.notice.notice-error {
+    border-left-color: #d63638;
+    background-color: #fcf0f1;
+}
+
+.notice.notice-success {
+    border-left-color: #00a32a;
+    background-color: #f0f8f0;
+}
+
+/* Loading animation for test email */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+#mff-test-email:disabled::after {
+    content: "";
+    width: 12px;
+    height: 12px;
+    margin-left: 8px;
+    border: 2px solid #ffffff;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}
+
+/* Validation styling */
+input[style*="border-color: rgb(214, 54, 56)"],
+input[style*="border-color: #d63638"] {
+    box-shadow: 0 0 0 1px #d63638 !important;
+}
+
+/* Auto-suggest animation */
+@keyframes highlight {
+    0% { background-color: #fff3cd; }
+    100% { background-color: #ffffff; }
+}
+
+.auto-suggested {
+    animation: highlight 2s ease-out;
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+/* Select styling */
+select {
+    min-width: 150px;
+}
+
+/* Textarea styling */
+textarea.large-text {
+    width: 100%;
+    max-width: 500px;
+    min-height: 80px;
+}
+
+/* SMTP status indicators */
+.mff-status-indicator.success {
+    background: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.mff-status-indicator.error {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.mff-status-indicator.warning {
+    background: #fff3cd;
+    border-color: #ffeaa7;
+    color: #856404;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .mff-smtp-examples {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-table th,
+    .form-table td {
+        display: block;
+        width: 100%;
+    }
+    
+    .form-table th {
+        padding-bottom: 5px;
+        width: auto;
+    }
+    
+    .form-table td {
+        padding-top: 0;
+        padding-bottom: 20px;
+    }
+    
+    .mff-connection-status table {
+        display: block;
+    }
+    
+    .mff-connection-status td {
+        display: block;
+        padding: 5px 0;
+    }
+    
+    .mff-connection-status td:first-child {
+        width: auto;
+        font-weight: bold;
+    }
+    
+    .mff-test-email-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .wrap {
+        margin-right: 10px;
+    }
+    
+    .mff-help-section,
+    .mff-connection-status {
+        padding: 10px;
+    }
+    
+    .regular-text,
+    .large-text {
+        width: 100%;
+        max-width: none;
+    }
+    
+    .mff-example {
+        padding: 10px;
+    }
+}
+
+/* Admin menu icon styling */
+.wp-menu-image.dashicons-email-alt::before {
+    color: #a7aaad;
+}
+
+.wp-has-current-submenu .wp-menu-image.dashicons-email-alt::before,
+.current-menu-item .wp-menu-image.dashicons-email-alt::before {
+    color: #fff;
+}
+
+/* Settings page specific styles */
+.mutual-fund-form_page_mutual-fund-form .form-table {
+    clear: both;
+}
+
+.mutual-fund-form_page_mutual-fund-form .submit {
+    padding: 0;
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+
+/* Help text styling */
+.description code {
+    background: #f1f1f1;
+    padding: 2px 4px;
+    border-radius: 2px;
+    font-size: 11px;
+}

@@ -1,11 +1,11 @@
 <?php
 
 /**
- * Plugin Name: test Naveen
- * Plugin URI: https://yoursite.com
+ * Plugin Name: Naveen Kamal
+ * Plugin URI: https://iamnaveenoff.in
  * Description: A comprehensive mutual fund application form with enhanced SMTP email notifications
  * Version: 1.2.0
- * Author: Your Name
+ * Author: Naveen Kumar
  * License: GPL v2 or later
  */
 

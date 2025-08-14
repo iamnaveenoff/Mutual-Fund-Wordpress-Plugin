@@ -139,18 +139,17 @@ jQuery(document).ready(function($) {
             
             const form = $('#mutual-fund-form');
             const submitBtn = $('#submit-btn');
-            // const spinner = $('#loading-spinner');
+            const spinner = $('#loading-spinner');
             const messagesDiv = $('#mff-messages');
             
             // Clear previous messages
             messagesDiv.hide().empty();
-             submitBtn.prop('disabled', true);
+            
             // Validate form
             if (!this.validateForm()) {
                 return false;
             }
-            const originalText = submitBtn.html();
-            submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Processing...');
+            
             // Disable submit button and show spinner
             submitBtn.prop('disabled', true).find('i').removeClass('fa-send').addClass('fa-spinner fa-spin');
             spinner.show();
@@ -198,7 +197,6 @@ jQuery(document).ready(function($) {
                     spinner.hide();
                 }
             });
-            
         },
         
         validateForm: function() {

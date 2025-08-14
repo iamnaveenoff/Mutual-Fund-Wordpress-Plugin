@@ -454,9 +454,10 @@ class MutualFundForm
     {
         $options = get_option('mff_settings', array());
 
-        // Check if settings were just updated
-        if (isset($_GET['settings-updated']) && $_GET['settings-updated'] == 'true') {
-            add_settings_error('mff_settings', 'settings_updated', 'Settings saved successfully!', 'success');
+        // Handle form submission
+        if (isset($_POST['submit']) && check_admin_referer('mff_settings_group-options')) {
+            // Settings are handled by WordPress settings API
+            echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
         }
 ?>
         <div class="wrap">
@@ -489,7 +490,6 @@ class MutualFundForm
                 <?php
                 settings_fields('mff_settings_group');
                 do_settings_sections('mff_settings');
-                // Change this line - use the correct ID
                 submit_button('Save Settings', 'primary', 'submit', true, array('id' => 'mff-save-settings'));
                 ?>
             </form>
@@ -512,13 +512,6 @@ class MutualFundForm
                 </div>
             </div>
         </div>
-
-        <script type="text/javascript">
-            jQuery(document).ready(function($) {
-                // Re-enable the save button after page load (in case of browser back button)
-                $('#mff-save-settings').prop('disabled', false).val('Save Settings');
-            });
-        </script>
 <?php
     }
 }

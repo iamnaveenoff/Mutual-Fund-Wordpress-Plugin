@@ -248,8 +248,6 @@ jQuery(document).ready(function($) {
                 // Scroll to top
                 $('html, body').animate({ scrollTop: 0 }, 500);
                 
-                // Re-enable the button since we prevented submission
-                $(this).prop('disabled', false).val('Save Settings');
                 return false;
             }
         }
@@ -279,19 +277,17 @@ jQuery(document).ready(function($) {
             const errorHtml = '<div class="notice notice-error is-dismissible"><p><strong>Please enter valid email addresses.</strong></p></div>';
             $('.wrap h1').after(errorHtml);
             $('html, body').animate({ scrollTop: 0 }, 500);
-            // Re-enable the button since we prevented submission
-            $(this).prop('disabled', false).val('Save Settings');
             return false;
         }
         
-        // If we reach here, validation passed - show saving state and allow form submission
+        // Show saving state
         $(this).prop('disabled', true).val('Saving Settings...');
-        // Don't prevent default - let the form submit normally
     });
+    
     // Form submission handler
-    // $('form').on('submit', function() {
-    //     $('#mff-save-settings').prop('disabled', true).val('Saving Settings...');
-    // });
+    $('form').on('submit', function() {
+        $('#mff-save-settings').prop('disabled', true).val('Saving Settings...');
+    });
     
     // Auto-dismiss notices after 5 seconds
     setTimeout(function() {
@@ -335,118 +331,4 @@ jQuery(document).ready(function($) {
     if (window.console && window.console.log) {
         console.log('Mutual Fund Form Admin JS loaded successfully');
     }
-    $(window).on('load', function() {
-        // Re-enable save button in case it was left disabled
-        $('#mff-save-settings').prop('disabled', false).val('Save Settings');
-    });
-    $('#mff-save-settings, input[name="submit"]').on('click', function(e) {
-    const $button = $(this);
-    
-    // Clear any previous error styles
-    $('.form-table input, .form-table select, .form-table textarea').css('border-color', '');
-    $('.email-error').remove();
-    
-    const smtpEnabled = $('input[name="mff_settings[enable_smtp]"]').is(':checked');
-    
-    if (smtpEnabled) {
-        const requiredFields = [
-            { name: 'mff_settings[smtp_host]', label: 'SMTP Host' },
-            { name: 'mff_settings[smtp_username]', label: 'SMTP Username' },
-            { name: 'mff_settings[smtp_password]', label: 'SMTP Password' }
-        ];
-        
-        let hasErrors = false;
-        const errors = [];
-        
-        requiredFields.forEach(function(fieldInfo) {
-            const field = $('input[name="' + fieldInfo.name + '"]');
-            if (!field.val().trim()) {
-                field.css('border-color', '#d63638');
-                errors.push(fieldInfo.label + ' is required when SMTP is enabled');
-                hasErrors = true;
-            }
-        });
-        
-        // Validate port
-        const portField = $('input[name="mff_settings[smtp_port]"]');
-        const port = parseInt(portField.val());
-        if (isNaN(port) || port < 1 || port > 65535) {
-            portField.css('border-color', '#d63638');
-            errors.push('SMTP Port must be between 1 and 65535');
-            hasErrors = true;
-        }
-        
-        if (hasErrors) {
-            e.preventDefault();
-            
-            // Show error notice
-            const errorHtml = '<div class="notice notice-error is-dismissible"><p><strong>Please fix the following errors:</strong><br>' + 
-                errors.map(error => '• ' + error).join('<br>') + '</p></div>';
-            
-            $('.wrap h1').after(errorHtml);
-            
-            // Scroll to top
-            $('html, body').animate({ scrollTop: 0 }, 500);
-            
-            // Re-enable the button since we prevented submission
-            $button.prop('disabled', false);
-            if ($button.is('input')) {
-                $button.val('Save Settings');
-            } else {
-                $button.text('Save Settings');
-            }
-            return false;
-        }
-    }
-    
-    // Validate email fields
-    const emailFields = [
-        { name: 'mff_settings[from_email]', label: 'From Email' },
-        { name: 'mff_settings[to_email]', label: 'Recipient Email' }
-    ];
-    
-    let emailErrors = false;
-    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-    
-    emailFields.forEach(function(fieldInfo) {
-        const field = $('input[name="' + fieldInfo.name + '"]');
-        const email = field.val();
-        
-        if (email && !emailRegex.test(email)) {
-            field.css('border-color', '#d63638');
-            field.after('<div class="email-error">' + fieldInfo.label + ' is not valid</div>');
-            emailErrors = true;
-        }
-    });
-    
-    if (emailErrors) {
-        e.preventDefault();
-        const errorHtml = '<div class="notice notice-error is-dismissible"><p><strong>Please enter valid email addresses.</strong></p></div>';
-        $('.wrap h1').after(errorHtml);
-        $('html, body').animate({ scrollTop: 0 }, 500);
-        // Re-enable the button since we prevented submission
-        $button.prop('disabled', false);
-        if ($button.is('input')) {
-            $button.val('Save Settings');
-        } else {
-            $button.text('Save Settings');
-        }
-        return false;
-    }
-    
-    // If we reach here, validation passed - show saving state and allow form submission
-    $button.prop('disabled', true);
-    if ($button.is('input')) {
-        $button.val('Saving Settings...');
-    } else {
-        $button.text('Saving Settings...');
-    }
-    // Don't prevent default - let the form submit normally
-});
-$(window).on('load', function() {
-    // Re-enable save button in case it was left disabled
-    $('#mff-save-settings, input[name="submit"]').prop('disabled', false);
-    $('#mff-save-settings').val('Save Settings');
-    $('input[name="submit"]').val('Save Settings');
-});
 });

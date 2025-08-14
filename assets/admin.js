@@ -1,6 +1,8 @@
-// assets/admin.js
+// assets/admin.js - Fixed version
 jQuery(document).ready(function($) {
     'use strict';
+    
+    let isSubmitting = false;
     
     // Test email functionality
     $('#mff-test-email').on('click', function(e) {
@@ -190,7 +192,7 @@ jQuery(document).ready(function($) {
             
             // Show a helpful notice
             if (suggested && $('.mff-auto-suggest-notice').length === 0) {
-                $(this).after('<div class="mff-auto-suggest-notice">🔧 Auto-suggested SMTP settings for ' + domain + '</div>');
+                $(this).after('<div class="mff-auto-suggest-notice">📧 Auto-suggested SMTP settings for ' + domain + '</div>');
                 setTimeout(function() {
                     $('.mff-auto-suggest-notice').fadeOut(function() {
                         $(this).remove();
@@ -200,23 +202,29 @@ jQuery(document).ready(function($) {
         }
     });
     
-    // Save button enhancement with validation
+    // FIXED: Form submission handling
     $('#mff-save-settings').on('click', function(e) {
+        // Don't prevent default - let WordPress handle the form submission
+        if (isSubmitting) {
+            e.preventDefault();
+            return false;
+        }
+        
         // Clear any previous error styles
         $('.form-table input, .form-table select, .form-table textarea').css('border-color', '');
         $('.email-error').remove();
         
         const smtpEnabled = $('input[name="mff_settings[enable_smtp]"]').is(':checked');
+        let hasErrors = false;
+        const errors = [];
         
+        // Validate only if SMTP is enabled
         if (smtpEnabled) {
             const requiredFields = [
                 { name: 'mff_settings[smtp_host]', label: 'SMTP Host' },
                 { name: 'mff_settings[smtp_username]', label: 'SMTP Username' },
                 { name: 'mff_settings[smtp_password]', label: 'SMTP Password' }
             ];
-            
-            let hasErrors = false;
-            const errors = [];
             
             requiredFields.forEach(function(fieldInfo) {
                 const field = $('input[name="' + fieldInfo.name + '"]');
@@ -235,21 +243,6 @@ jQuery(document).ready(function($) {
                 errors.push('SMTP Port must be between 1 and 65535');
                 hasErrors = true;
             }
-            
-            if (hasErrors) {
-                e.preventDefault();
-                
-                // Show error notice
-                const errorHtml = '<div class="notice notice-error is-dismissible"><p><strong>Please fix the following errors:</strong><br>' + 
-                    errors.map(error => '• ' + error).join('<br>') + '</p></div>';
-                
-                $('.wrap h1').after(errorHtml);
-                
-                // Scroll to top
-                $('html, body').animate({ scrollTop: 0 }, 500);
-                
-                return false;
-            }
         }
         
         // Validate email fields
@@ -258,7 +251,6 @@ jQuery(document).ready(function($) {
             { name: 'mff_settings[to_email]', label: 'Recipient Email' }
         ];
         
-        let emailErrors = false;
         const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
         
         emailFields.forEach(function(fieldInfo) {
@@ -268,30 +260,42 @@ jQuery(document).ready(function($) {
             if (email && !emailRegex.test(email)) {
                 field.css('border-color', '#d63638');
                 field.after('<div class="email-error">' + fieldInfo.label + ' is not valid</div>');
-                emailErrors = true;
+                hasErrors = true;
+                errors.push(fieldInfo.label + ' is not valid');
             }
         });
         
-        if (emailErrors) {
+        // If there are errors, prevent submission
+        if (hasErrors) {
             e.preventDefault();
-            const errorHtml = '<div class="notice notice-error is-dismissible"><p><strong>Please enter valid email addresses.</strong></p></div>';
+            
+            // Show error notice
+            const errorHtml = '<div class="notice notice-error is-dismissible"><p><strong>Please fix the following errors:</strong><br>' + 
+                errors.slice(0, 5).map(error => '• ' + error).join('<br>') + '</p></div>';
+            
+            // Remove any existing notices
+            $('.notice').remove();
             $('.wrap h1').after(errorHtml);
+            
+            // Scroll to top
             $('html, body').animate({ scrollTop: 0 }, 500);
+            
             return false;
         }
         
-        // Show saving state
+        // If no errors, show saving state
+        isSubmitting = true;
         $(this).prop('disabled', true).val('Saving Settings...');
+        
+        // Let the form submit naturally - WordPress will handle it
     });
-    
-    // Form submission handler
-    $('form').on('submit', function() {
-        $('#mff-save-settings').prop('disabled', true).val('Saving Settings...');
-    });
+        
+    // REMOVED: Form submission handler that was interfering
+    // Let WordPress Settings API handle form submission naturally
     
     // Auto-dismiss notices after 5 seconds
     setTimeout(function() {
-        $('.notice.is-dismissible').fadeOut();
+        $('.notice.is-dismissible:not(.notice-error)').fadeOut();
     }, 5000);
     
     // Handle dismissible notices
@@ -303,29 +307,6 @@ jQuery(document).ready(function($) {
     setTimeout(function() {
         $('.auto-suggested').removeClass('auto-suggested');
     }, 3000);
-    
-    // Initialize tooltips or help text if needed
-    $('[data-toggle="tooltip"]').each(function() {
-        // Add tooltip functionality if needed
-    });
-    
-    // Handle settings sections collapsing (optional enhancement)
-    $('.form-table').each(function() {
-        const $table = $(this);
-        const $heading = $table.prev('h2');
-        
-        if ($heading.length) {
-            $heading.css('cursor', 'pointer').on('click', function() {
-                $table.slideToggle(300);
-                const $icon = $heading.find('.dashicons');
-                if ($icon.length === 0) {
-                    $heading.prepend('<span class="dashicons dashicons-arrow-down-alt2" style="margin-right: 5px;"></span>');
-                } else {
-                    $icon.toggleClass('dashicons-arrow-down-alt2 dashicons-arrow-up-alt2');
-                }
-            });
-        }
-    });
     
     // Debug information for developers
     if (window.console && window.console.log) {

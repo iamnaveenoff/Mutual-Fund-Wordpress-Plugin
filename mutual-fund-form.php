@@ -4,7 +4,7 @@
  * Plugin Name: test Naveen
  * Plugin URI: https://yoursite.com
  * Description: A comprehensive mutual fund application form with enhanced SMTP email notifications
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Your Name
  * License: GPL v2 or later
  */
@@ -17,13 +17,18 @@ if (!defined('ABSPATH')) {
 // Define plugin constants
 define('MFF_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('MFF_PLUGIN_PATH', plugin_dir_path(__FILE__));
-define('MFF_VERSION', '1.1.0');
+define('MFF_VERSION', '1.2.0');
+define('MFF_DB_VERSION', '1.0');
 
 class MutualFundForm
 {
+    private $settings_table_name;
 
     public function __construct()
     {
+        global $wpdb;
+        $this->settings_table_name = $wpdb->prefix . 'mff_settings';
+
         add_action('init', array($this, 'init'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_shortcode('mutual_fund_form', array($this, 'display_form'));
@@ -45,6 +50,9 @@ class MutualFundForm
 
         // Deactivation hook
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
+
+        // Check if database needs updating
+        add_action('plugins_loaded', array($this, 'check_database_version'));
     }
 
     public function init()
@@ -55,7 +63,70 @@ class MutualFundForm
 
     public function activate()
     {
-        // Set default options
+        // Create settings table
+        $this->create_settings_table();
+
+        // Set default options in both WordPress options and custom table
+        $this->set_default_settings();
+
+        // Create submissions table or post type
+        $this->create_submission_post_type();
+        flush_rewrite_rules();
+
+        // Store current database version
+        update_option('mff_db_version', MFF_DB_VERSION);
+    }
+
+    public function deactivate()
+    {
+        flush_rewrite_rules();
+    }
+
+    public function check_database_version()
+    {
+        $installed_ver = get_option('mff_db_version');
+
+        if ($installed_ver != MFF_DB_VERSION) {
+            $this->create_settings_table();
+            update_option('mff_db_version', MFF_DB_VERSION);
+        }
+    }
+
+    /**
+     * Create custom settings table
+     */
+    private function create_settings_table()
+    {
+        global $wpdb;
+
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE {$this->settings_table_name} (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            setting_key varchar(100) NOT NULL,
+            setting_value longtext NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY setting_key (setting_key)
+        ) $charset_collate;";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+
+        // Log table creation for debugging
+        if ($wpdb->get_var("SHOW TABLES LIKE '{$this->settings_table_name}'") == $this->settings_table_name) {
+            error_log('MFF: Settings table created successfully');
+        } else {
+            error_log('MFF: Failed to create settings table');
+        }
+    }
+
+    /**
+     * Set default settings in both options and custom table
+     */
+    private function set_default_settings()
+    {
         $default_options = array(
             'smtp_host' => '',
             'smtp_port' => '587',
@@ -71,16 +142,105 @@ class MutualFundForm
             'store_submissions' => '1'
         );
 
+        // Save to WordPress options (fallback)
         add_option('mff_settings', $default_options);
 
-        // Create submissions table or post type
-        $this->create_submission_post_type();
-        flush_rewrite_rules();
+        // Save to custom table
+        foreach ($default_options as $key => $value) {
+            $this->save_setting($key, $value, false); // false = don't overwrite existing
+        }
     }
 
-    public function deactivate()
+    /**
+     * Save setting to custom table
+     */
+    private function save_setting($key, $value, $overwrite = true)
     {
-        flush_rewrite_rules();
+        global $wpdb;
+
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT setting_value FROM {$this->settings_table_name} WHERE setting_key = %s",
+            $key
+        ));
+
+        if ($existing === null) {
+            // Insert new setting
+            $result = $wpdb->insert(
+                $this->settings_table_name,
+                array(
+                    'setting_key' => $key,
+                    'setting_value' => $value
+                ),
+                array('%s', '%s')
+            );
+
+            if ($result === false) {
+                error_log('MFF: Failed to insert setting: ' . $key . ' - ' . $wpdb->last_error);
+            }
+        } elseif ($overwrite) {
+            // Update existing setting
+            $result = $wpdb->update(
+                $this->settings_table_name,
+                array('setting_value' => $value),
+                array('setting_key' => $key),
+                array('%s'),
+                array('%s')
+            );
+
+            if ($result === false) {
+                error_log('MFF: Failed to update setting: ' . $key . ' - ' . $wpdb->last_error);
+            }
+        }
+    }
+
+    /**
+     * Get setting from custom table
+     */
+    private function get_setting($key, $default = '')
+    {
+        global $wpdb;
+
+        $value = $wpdb->get_var($wpdb->prepare(
+            "SELECT setting_value FROM {$this->settings_table_name} WHERE setting_key = %s",
+            $key
+        ));
+
+        return $value !== null ? $value : $default;
+    }
+
+    /**
+     * Get all settings from custom table
+     */
+    public function get_all_settings()
+    {
+        global $wpdb;
+
+        $results = $wpdb->get_results("SELECT setting_key, setting_value FROM {$this->settings_table_name}", ARRAY_A);
+
+        if (empty($results)) {
+            // Fallback to WordPress options if custom table is empty
+            return get_option('mff_settings', array());
+        }
+
+        $settings = array();
+        foreach ($results as $row) {
+            $settings[$row['setting_key']] = $row['setting_value'];
+        }
+
+        return $settings;
+    }
+
+    /**
+     * Save all settings to custom table
+     */
+    public function save_all_settings($settings)
+    {
+        foreach ($settings as $key => $value) {
+            $this->save_setting($key, $value, true);
+        }
+
+        // Also save to WordPress options as backup
+        update_option('mff_settings', $settings);
     }
 
     private function create_submission_post_type()
@@ -187,19 +347,16 @@ class MutualFundForm
             'mutual-fund-form',           // Menu slug (same as parent for default page)
             array($this, 'admin_page')    // Function
         );
-
-        // Note: Submissions submenu will be added automatically by the post type
     }
 
     public function admin_init()
     {
-        // Register settings with proper option group
+        // Register settings with a simple sanitize callback
         register_setting(
             'mff_settings_group',
             'mff_settings',
             array(
-                'sanitize_callback' => array($this, 'sanitize_settings'),
-                'default' => array()
+                'sanitize_callback' => array($this, 'sanitize_and_save_settings'),
             )
         );
 
@@ -250,12 +407,12 @@ class MutualFundForm
         wp_enqueue_style('mff-admin-style', MFF_PLUGIN_URL . 'assets/admin.css', array(), MFF_VERSION);
     }
 
-    public function sanitize_settings($input)
+    public function sanitize_and_save_settings($input)
     {
         $sanitized = array();
 
-        // Get current options to preserve existing values
-        $current_options = get_option('mff_settings', array());
+        // Get current options from custom table
+        $current_options = $this->get_all_settings();
 
         // Text fields
         $text_fields = array('smtp_host', 'smtp_username', 'from_email', 'from_name', 'to_email', 'email_subject');
@@ -313,6 +470,15 @@ class MutualFundForm
         $sanitized['enable_smtp'] = isset($input['enable_smtp']) ? '1' : '0';
         $sanitized['store_submissions'] = isset($input['store_submissions']) ? '1' : '0';
 
+        // Save to custom table FIRST
+        foreach ($sanitized as $key => $value) {
+            $this->save_setting($key, $value, true);
+        }
+
+        // Add success message
+        add_settings_error('mff_settings', 'settings_updated', 'Settings saved successfully!', 'updated');
+
+        // Return the sanitized array for WordPress to save as backup
         return $sanitized;
     }
 
@@ -371,10 +537,16 @@ class MutualFundForm
 
     public function field_callback($args)
     {
-        $options = get_option('mff_settings', array());
+        // Get options from custom table
+        $options = $this->get_all_settings();
         $field = $args['field'];
         $type = $args['type'];
         $value = isset($options[$field]) ? $options[$field] : '';
+
+        // For checkboxes, ensure we're checking the right value
+        if ($type === 'checkbox') {
+            $value = ($value === '1' || $value === 1) ? 1 : 0;
+        }
 
         switch ($type) {
             case 'checkbox':
@@ -432,7 +604,16 @@ class MutualFundForm
     {
         $screen = get_current_screen();
         if ($screen && strpos($screen->id, 'mutual-fund-form') !== false) {
-            $options = get_option('mff_settings', array());
+            // Get options from custom table
+            $options = $this->get_all_settings();
+
+            // Check if custom table exists
+            global $wpdb;
+            if ($wpdb->get_var("SHOW TABLES LIKE '{$this->settings_table_name}'") != $this->settings_table_name) {
+                echo '<div class="notice notice-error is-dismissible">';
+                echo '<p><strong>Error:</strong> Settings table not found. Please deactivate and reactivate the plugin.</p>';
+                echo '</div>';
+            }
 
             // Check if SMTP is enabled but not configured
             if (!empty($options['enable_smtp']) && empty($options['smtp_host'])) {
@@ -452,12 +633,12 @@ class MutualFundForm
 
     public function admin_page()
     {
-        $options = get_option('mff_settings', array());
+        // Get options from custom table
+        $options = $this->get_all_settings();
 
-        // Handle form submission
-        if (isset($_POST['submit']) && check_admin_referer('mff_settings_group-options')) {
-            // Settings are handled by WordPress settings API
-            echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
+        // Handle settings errors and success messages
+        if (isset($_GET['settings-updated']) && $_GET['settings-updated'] == 'true') {
+            add_settings_error('mff_settings', 'settings_updated', 'Settings saved successfully!', 'success');
         }
 ?>
         <div class="wrap">
@@ -466,9 +647,13 @@ class MutualFundForm
             <div class="notice notice-info">
                 <p><strong>Shortcode:</strong> Use <code>[mutual_fund_form]</code> to display the form on any page or post.</p>
                 <p><strong>Form Submissions:</strong> <a href="<?php echo admin_url('edit.php?post_type=mff_submission'); ?>">View all submissions</a></p>
+                <p><strong>Database:</strong> Settings stored in custom table: <code><?php echo $this->settings_table_name; ?></code></p>
             </div>
 
             <?php
+            // Display settings errors/success messages
+            settings_errors('mff_settings');
+
             // Display connection status
             if (!empty($options['enable_smtp']) && !empty($options['smtp_host'])) {
                 echo '<div class="mff-connection-status">';
@@ -481,16 +666,13 @@ class MutualFundForm
                 echo '</table>';
                 echo '</div>';
             }
-
-            // Display any settings errors
-            settings_errors('mff_settings');
             ?>
 
             <form method="post" action="options.php">
                 <?php
                 settings_fields('mff_settings_group');
                 do_settings_sections('mff_settings');
-                submit_button('Save Settings', 'primary', 'submit', true, array('id' => 'mff-save-settings'));
+                submit_button('Save Settings', 'primary', 'mff-save-settings', true);
                 ?>
             </form>
 

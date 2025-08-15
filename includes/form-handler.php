@@ -1,5 +1,5 @@
 <?php
-// includes/form-handler.php - Enhanced version with custom table support
+// includes/form-handler.php - Enhanced version with better SMTP debugging
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -13,21 +13,12 @@ class MFF_FormHandler
     private $form_data = array();
     private $debug_info = array();
     private $smtp_debug = '';
-    private $settings_table_name;
 
     public function __construct()
     {
-        global $wpdb;
-        $this->settings_table_name = $wpdb->prefix . 'mff_settings';
-        
-        // Get settings from custom table first, fallback to options
-        $this->options = $this->get_settings_from_table();
-        
-        if (empty($this->options)) {
-            $this->options = get_option('mff_settings', array());
-        }
+        $this->options = get_option('mff_settings');
 
-        // Set default options if still empty
+        // Set default options if not set
         if (empty($this->options)) {
             $this->options = array(
                 'smtp_host' => '',
@@ -43,32 +34,6 @@ class MFF_FormHandler
                 'enable_smtp' => '0'
             );
         }
-    }
-    
-    /**
-     * Get settings from custom table
-     */
-    private function get_settings_from_table()
-    {
-        global $wpdb;
-        
-        // Check if table exists
-        if ($wpdb->get_var("SHOW TABLES LIKE '{$this->settings_table_name}'") != $this->settings_table_name) {
-            return array();
-        }
-        
-        $results = $wpdb->get_results("SELECT setting_key, setting_value FROM {$this->settings_table_name}", ARRAY_A);
-        
-        if (empty($results)) {
-            return array();
-        }
-        
-        $settings = array();
-        foreach ($results as $row) {
-            $settings[$row['setting_key']] = $row['setting_value'];
-        }
-        
-        return $settings;
     }
 
     public function process_form($post_data)
@@ -336,34 +301,34 @@ class MFF_FormHandler
         $html = '<!DOCTYPE html>
 <html>
 <head>
-   <meta charset="UTF-8">
-   <title>Mutual Fund Form Submission</title>
-   <style>
-       body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
-       .container { max-width: 800px; margin: 0 auto; }
-       table { border-collapse: collapse; width: 100%; margin: 20px 0; }
-       th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: top; }
-       th { background-color: #f8f9fa; font-weight: bold; width: 30%; }
-       .header { background-color: #007bff; color: white; text-align: center; padding: 20px; margin-bottom: 20px; border-radius: 5px; }
-       .section { background-color: #e9ecef; font-weight: bold; text-align: center; }
-       .info { margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #007bff; }
-       .footer { margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; font-size: 12px; color: #666; }
-   </style>
+    <meta charset="UTF-8">
+    <title>Mutual Fund Form Submission</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: top; }
+        th { background-color: #f8f9fa; font-weight: bold; width: 30%; }
+        .header { background-color: #007bff; color: white; text-align: center; padding: 20px; margin-bottom: 20px; border-radius: 5px; }
+        .section { background-color: #e9ecef; font-weight: bold; text-align: center; }
+        .info { margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #007bff; }
+        .footer { margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; font-size: 12px; color: #666; }
+    </style>
 </head>
 <body>
-   <div class="container">
-       <div class="header">
-           <h2>New Mutual Fund Application Received</h2>
-       </div>
-       
-       <div class="info">
-           <strong>Submission Details:</strong><br>
-           <strong>Date & Time:</strong> ' . current_time('F j, Y \a\t g:i A T') . '<br>
-           <strong>IP Address:</strong> ' . $this->get_client_ip() . '<br>
-           <strong>Browser:</strong> ' . esc_html($this->get_user_agent()) . '
-       </div>
-       
-       <table>';
+    <div class="container">
+        <div class="header">
+            <h2>New Mutual Fund Application Received</h2>
+        </div>
+        
+        <div class="info">
+            <strong>Submission Details:</strong><br>
+            <strong>Date & Time:</strong> ' . current_time('F j, Y \a\t g:i A T') . '<br>
+            <strong>IP Address:</strong> ' . $this->get_client_ip() . '<br>
+            <strong>Browser:</strong> ' . esc_html($this->get_user_agent()) . '
+        </div>
+        
+        <table>';
 
         // Field labels mapping
         $field_labels = array(
@@ -506,13 +471,13 @@ class MFF_FormHandler
         }
 
         $html .= '</table>
-       
-       <div class="footer">
-           <p><strong>Important:</strong> Please review this application carefully and contact the applicant for any clarifications needed.</p>
-           <p>This email was generated automatically by the Mutual Fund Application Form on ' . get_bloginfo('name') . '</p>
-       </div>
-       
-   </div>
+        
+        <div class="footer">
+            <p><strong>Important:</strong> Please review this application carefully and contact the applicant for any clarifications needed.</p>
+            <p>This email was generated automatically by the Mutual Fund Application Form on ' . get_bloginfo('name') . '</p>
+        </div>
+        
+    </div>
 </body>
 </html>';
 
@@ -522,44 +487,44 @@ class MFF_FormHandler
     private function get_test_email_content()
     {
         return '
-       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-           <h2 style="color: #007bff; text-align: center; margin-bottom: 20px;">SMTP Test Email</h2>
-           
-           <p><strong>This is a test email from your Mutual Fund Form plugin.</strong></p>
-           
-           <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-               <tr>
-                   <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">SMTP Host:</td>
-                   <td style="padding: 8px; border: 1px solid #ddd;">' . esc_html($this->options['smtp_host']) . '</td>
-               </tr>
-               <tr>
-                   <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">Port:</td>
-                   <td style="padding: 8px; border: 1px solid #ddd;">' . esc_html($this->options['smtp_port']) . '</td>
-               </tr>
-               <tr>
-                   <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">Encryption:</td>
-                   <td style="padding: 8px; border: 1px solid #ddd;">' . esc_html(strtoupper($this->options['smtp_encryption'] ?: 'None')) . '</td>
-               </tr>
-               <tr>
-                   <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">Username:</td>
-                   <td style="padding: 8px; border: 1px solid #ddd;">' . esc_html($this->options['smtp_username']) . '</td>
-               </tr>
-               <tr>
-                   <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">From Email:</td>
-                   <td style="padding: 8px; border: 1px solid #ddd;">' . esc_html($this->options['from_email']) . '</td>
-               </tr>
-               <tr>
-                   <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">To Email:</td>
-                   <td style="padding: 8px; border: 1px solid #ddd;">' . esc_html($this->options['to_email']) . '</td>
-               </tr>
-           </table>
-           
-           <p style="margin-top: 20px;"><strong>Sent at:</strong> ' . current_time('Y-m-d H:i:s T') . '</p>
-           <p style="margin-top: 10px;"><strong>Website:</strong> ' . get_bloginfo('name') . ' (' . home_url() . ')</p>
-           
-           <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
-           <p style="font-size: 12px; color: #666;">If you received this email, your SMTP configuration is working correctly!</p>
-       </div>';
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+            <h2 style="color: #007bff; text-align: center; margin-bottom: 20px;">SMTP Test Email</h2>
+            
+            <p><strong>This is a test email from your Mutual Fund Form plugin.</strong></p>
+            
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">SMTP Host:</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">' . esc_html($this->options['smtp_host']) . '</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">Port:</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">' . esc_html($this->options['smtp_port']) . '</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">Encryption:</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">' . esc_html(strtoupper($this->options['smtp_encryption'] ?: 'None')) . '</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">Username:</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">' . esc_html($this->options['smtp_username']) . '</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">From Email:</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">' . esc_html($this->options['from_email']) . '</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">To Email:</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">' . esc_html($this->options['to_email']) . '</td>
+                </tr>
+            </table>
+            
+            <p style="margin-top: 20px;"><strong>Sent at:</strong> ' . current_time('Y-m-d H:i:s T') . '</p>
+            <p style="margin-top: 10px;"><strong>Website:</strong> ' . get_bloginfo('name') . ' (' . home_url() . ')</p>
+            
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+            <p style="font-size: 12px; color: #666;">If you received this email, your SMTP configuration is working correctly!</p>
+        </div>';
     }
 
     private function log_submission($post_data)
@@ -580,7 +545,7 @@ class MFF_FormHandler
                 'submission_ip' => $this->get_client_ip(),
                 'submission_date' => current_time('Y-m-d H:i:s'),
                 'user_agent' => $this->get_user_agent(),
-                'form_version' => '1.2.0'
+                'form_version' => '1.1.0'
             )
         );
 

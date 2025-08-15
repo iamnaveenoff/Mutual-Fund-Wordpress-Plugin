@@ -276,8 +276,7 @@ if (!defined('ABSPATH')) {
                 <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
                     <i class="fa fa-send"></i> Submit Application
                 </button>
-                <!-- FIXED: Better loading spinner that gets properly hidden -->
-                <div class="loading-spinner" id="loading-spinner" style="display: none; margin-top: 10px;">
+                <div class="loading-spinner" id="loading-spinner" style="display: none;">
                     <i class="fa fa-spinner fa-spin"></i> Processing...
                 </div>
             </div>

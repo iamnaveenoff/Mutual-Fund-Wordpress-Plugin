@@ -209,25 +209,45 @@ class MutualFundForm
     }
 
     /**
-     * Get all settings from custom table
+     * Get all settings from custom table with fallback
      */
     public function get_all_settings()
     {
         global $wpdb;
 
+        // First try to get from custom table
         $results = $wpdb->get_results("SELECT setting_key, setting_value FROM {$this->settings_table_name}", ARRAY_A);
 
-        if (empty($results)) {
-            // Fallback to WordPress options if custom table is empty
-            return get_option('mff_settings', array());
-        }
-
         $settings = array();
-        foreach ($results as $row) {
-            $settings[$row['setting_key']] = $row['setting_value'];
+
+        // If custom table has data, use it
+        if (!empty($results)) {
+            foreach ($results as $row) {
+                $settings[$row['setting_key']] = $row['setting_value'];
+            }
         }
 
-        return $settings;
+        // Get WordPress options as fallback and merge
+        $wp_options = get_option('mff_settings', array());
+
+        // Merge with defaults to ensure all keys exist
+        $default_options = array(
+            'smtp_host' => '',
+            'smtp_port' => '587',
+            'smtp_username' => '',
+            'smtp_password' => '',
+            'smtp_encryption' => 'tls',
+            'from_email' => get_option('admin_email'),
+            'from_name' => get_bloginfo('name'),
+            'to_email' => get_option('admin_email'),
+            'email_subject' => 'New Mutual Fund Application - {name}',
+            'success_message' => 'Thank you! Your form has been submitted successfully. We will contact you soon.',
+            'enable_smtp' => '0',
+            'store_submissions' => '1'
+        );
+
+        // Priority: custom table -> wp options -> defaults
+        return array_merge($default_options, $wp_options, $settings);
     }
 
     /**
@@ -407,80 +427,113 @@ class MutualFundForm
         wp_enqueue_style('mff-admin-style', MFF_PLUGIN_URL . 'assets/admin.css', array(), MFF_VERSION);
     }
 
-    // FIXED: Improved sanitization callback that properly saves to custom table
+    // FIXED: Completely rewritten sanitization callback to properly handle form data
     public function sanitize_and_save_settings($input)
     {
+        // Get current options as fallback
+        $current_options = $this->get_all_settings();
         $sanitized = array();
 
-        // Get current options from custom table
-        $current_options = $this->get_all_settings();
+        // Define all possible settings keys with their types
+        $setting_definitions = array(
+            'smtp_host' => 'text',
+            'smtp_port' => 'number',
+            'smtp_username' => 'text',
+            'smtp_password' => 'password',
+            'smtp_encryption' => 'select',
+            'from_email' => 'email',
+            'from_name' => 'text',
+            'to_email' => 'email',
+            'email_subject' => 'text',
+            'success_message' => 'textarea',
+            'enable_smtp' => 'checkbox',
+            'store_submissions' => 'checkbox'
+        );
 
-        // Text fields
-        $text_fields = array('smtp_host', 'smtp_username', 'from_email', 'from_name', 'to_email', 'email_subject');
-        foreach ($text_fields as $field) {
-            if (isset($input[$field])) {
-                $sanitized[$field] = sanitize_text_field($input[$field]);
-            } else {
-                $sanitized[$field] = isset($current_options[$field]) ? $current_options[$field] : '';
+        // Process each setting
+        foreach ($setting_definitions as $key => $type) {
+            switch ($type) {
+                case 'checkbox':
+                    // Checkboxes are only present in $_POST if checked
+                    $sanitized[$key] = isset($input[$key]) ? '1' : '0';
+                    break;
+
+                case 'number':
+                    if (isset($input[$key])) {
+                        $value = intval($input[$key]);
+                        if ($key === 'smtp_port') {
+                            $sanitized[$key] = ($value >= 1 && $value <= 65535) ? $value : 587;
+                        } else {
+                            $sanitized[$key] = $value;
+                        }
+                    } else {
+                        $sanitized[$key] = isset($current_options[$key]) ? $current_options[$key] : '587';
+                    }
+                    break;
+
+                case 'email':
+                    if (isset($input[$key])) {
+                        $email = sanitize_email($input[$key]);
+                        if (!empty($email) && !is_email($email)) {
+                            add_settings_error('mff_settings', 'invalid_' . $key, ucwords(str_replace('_', ' ', $key)) . ' is not valid.');
+                            $sanitized[$key] = isset($current_options[$key]) ? $current_options[$key] : get_option('admin_email');
+                        } else {
+                            $sanitized[$key] = $email;
+                        }
+                    } else {
+                        $sanitized[$key] = isset($current_options[$key]) ? $current_options[$key] : get_option('admin_email');
+                    }
+                    break;
+
+                case 'select':
+                    if (isset($input[$key])) {
+                        if ($key === 'smtp_encryption') {
+                            $sanitized[$key] = in_array($input[$key], array('tls', 'ssl', '')) ? $input[$key] : 'tls';
+                        } else {
+                            $sanitized[$key] = sanitize_text_field($input[$key]);
+                        }
+                    } else {
+                        $sanitized[$key] = isset($current_options[$key]) ? $current_options[$key] : 'tls';
+                    }
+                    break;
+
+                case 'textarea':
+                    if (isset($input[$key])) {
+                        $sanitized[$key] = sanitize_textarea_field($input[$key]);
+                    } else {
+                        $sanitized[$key] = isset($current_options[$key]) ? $current_options[$key] : '';
+                    }
+                    break;
+
+                case 'password':
+                    // Handle passwords carefully - don't sanitize, just store
+                    if (isset($input[$key])) {
+                        $sanitized[$key] = $input[$key];
+                    } else {
+                        $sanitized[$key] = isset($current_options[$key]) ? $current_options[$key] : '';
+                    }
+                    break;
+
+                default: // 'text'
+                    if (isset($input[$key])) {
+                        $sanitized[$key] = sanitize_text_field($input[$key]);
+                    } else {
+                        $sanitized[$key] = isset($current_options[$key]) ? $current_options[$key] : '';
+                    }
+                    break;
             }
         }
 
-        // Textarea fields
-        if (isset($input['success_message'])) {
-            $sanitized['success_message'] = sanitize_textarea_field($input['success_message']);
-        } else {
-            $sanitized['success_message'] = isset($current_options['success_message']) ? $current_options['success_message'] : '';
-        }
-
-        // Email validation
-        if (!empty($sanitized['from_email']) && !is_email($sanitized['from_email'])) {
-            add_settings_error('mff_settings', 'invalid_from_email', 'From Email is not valid.');
-            $sanitized['from_email'] = get_option('admin_email');
-        }
-
-        if (!empty($sanitized['to_email']) && !is_email($sanitized['to_email'])) {
-            add_settings_error('mff_settings', 'invalid_to_email', 'Recipient Email is not valid.');
-            $sanitized['to_email'] = get_option('admin_email');
-        }
-
-        // Numeric fields
-        if (isset($input['smtp_port'])) {
-            $sanitized['smtp_port'] = intval($input['smtp_port']);
-            if ($sanitized['smtp_port'] < 1 || $sanitized['smtp_port'] > 65535) {
-                $sanitized['smtp_port'] = 587;
-            }
-        } else {
-            $sanitized['smtp_port'] = isset($current_options['smtp_port']) ? $current_options['smtp_port'] : 587;
-        }
-
-        // Password field (don't sanitize, just store)
-        if (isset($input['smtp_password'])) {
-            $sanitized['smtp_password'] = $input['smtp_password'];
-        } else {
-            $sanitized['smtp_password'] = isset($current_options['smtp_password']) ? $current_options['smtp_password'] : '';
-        }
-
-        // Select fields
-        if (isset($input['smtp_encryption'])) {
-            $sanitized['smtp_encryption'] = in_array($input['smtp_encryption'], array('tls', 'ssl', '')) ? $input['smtp_encryption'] : 'tls';
-        } else {
-            $sanitized['smtp_encryption'] = isset($current_options['smtp_encryption']) ? $current_options['smtp_encryption'] : 'tls';
-        }
-
-        // Checkbox fields - these need special handling
-        $sanitized['enable_smtp'] = isset($input['enable_smtp']) ? '1' : '0';
-        $sanitized['store_submissions'] = isset($input['store_submissions']) ? '1' : '0';
-
-        // FIXED: Save to custom table using the dedicated method
+        // Save to custom table and WordPress options
         $this->save_all_settings($sanitized);
 
         // Add success message
-        add_settings_error('mff_settings', 'settings_updated', 'Settings saved successfully to custom table!', 'updated');
+        add_settings_error('mff_settings', 'settings_updated', 'Settings saved successfully!', 'updated');
 
         // Log for debugging
-        error_log('MFF: Settings saved to custom table: ' . print_r(array_keys($sanitized), true));
+        error_log('MFF: Settings saved - Keys: ' . implode(', ', array_keys($sanitized)));
 
-        // Return the sanitized array for WordPress to save as backup
+        // Return the sanitized array for WordPress
         return $sanitized;
     }
 
@@ -547,7 +600,7 @@ class MutualFundForm
 
         // For checkboxes, ensure we're checking the right value
         if ($type === 'checkbox') {
-            $value = ($value === '1' || $value === 1) ? 1 : 0;
+            $value = ($value === '1' || $value === 1 || $value === true) ? 1 : 0;
         }
 
         switch ($type) {
@@ -618,7 +671,7 @@ class MutualFundForm
             }
 
             // Check if SMTP is enabled but not configured
-            if (!empty($options['enable_smtp']) && empty($options['smtp_host'])) {
+            if (!empty($options['enable_smtp']) && $options['enable_smtp'] === '1' && empty($options['smtp_host'])) {
                 echo '<div class="notice notice-warning is-dismissible">';
                 echo '<p><strong>Warning:</strong> SMTP is enabled but no SMTP host is configured. Emails may not be sent properly.</p>';
                 echo '</div>';
@@ -657,7 +710,7 @@ class MutualFundForm
             settings_errors('mff_settings');
 
             // Display connection status
-            if (!empty($options['enable_smtp']) && !empty($options['smtp_host'])) {
+            if (!empty($options['enable_smtp']) && $options['enable_smtp'] === '1' && !empty($options['smtp_host'])) {
                 echo '<div class="mff-connection-status">';
                 echo '<h3>Current SMTP Configuration</h3>';
                 echo '<table class="form-table">';
